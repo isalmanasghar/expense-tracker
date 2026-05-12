@@ -56,3 +56,19 @@ def delete_expense(request, id):
     expense = Expense.objects.get(id=id)
     expense.delete()
     return redirect('expense_list')
+
+
+def edit_expense(request, id):
+    expense = get_object_or_404(Expense, id=id)
+    form = ExpenseForm(instance=expense)
+
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST, instance=expense)
+        if form.is_valid():
+            form.save()
+            return redirect('expense_list')
+
+    return render(request, 'expenses/edit_expense.html', {
+        'form': form,
+        'expense': expense,
+    })
