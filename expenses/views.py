@@ -1,3 +1,5 @@
+from django.db.models import Sum
+from django.db.models.functions import TruncMonth
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Sum
 from .models import Expense
@@ -30,6 +32,16 @@ def expense_list(request):
         .order_by('category')
     )
 
+    # Monthly summary
+    monthly_data = (
+        Expense.objects.order_by('-date')
+        .annotate(month=TruncMonth('date'))
+        .values('month')
+        .annotate(total=Sum('amount'))
+        .order_by('-month')
+    )
+    
+
     chart_labels = json.dumps([item['category'] for item in category_data])
     chart_values = json.dumps([float(item['total']) for item in category_data])
 
@@ -50,6 +62,7 @@ def expense_list(request):
         'end_date': end_date,
         'chart_labels': chart_labels,
         'chart_values': chart_values,
+        'monthly_data': monthly_data,
     })
 
 def delete_expense(request, id):
