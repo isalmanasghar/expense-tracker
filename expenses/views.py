@@ -1,20 +1,21 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
-from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Sum
 from .models import Expense
 from .forms import ExpenseForm
 import json
 
+@login_required
 def expense_list(request):
-    expenses = Expense.objects.all().order_by('-date')
+    expenses = Expense.objects.filter(user=request.user).order_by('-date')
 
-    # Read filter values from the URL
     category = request.GET.get('category', '')
     start_date = request.GET.get('start_date', '')
     end_date = request.GET.get('end_date', '')
 
-    # Apply filters if provided
     if category:
         expenses = expenses.filter(category=category)
     if start_date:
@@ -24,7 +25,6 @@ def expense_list(request):
 
     total = sum(e.amount for e in expenses)
 
-    # Group by category for the chart
     category_data = (
         expenses
         .values('category')
@@ -32,15 +32,13 @@ def expense_list(request):
         .order_by('category')
     )
 
-    # Monthly summary
     monthly_data = (
-        Expense.objects.order_by('-date')
+        Expense.objects.filter(user=request.user)
         .annotate(month=TruncMonth('date'))
         .values('month')
         .annotate(total=Sum('amount'))
         .order_by('-month')
     )
-    
 
     chart_labels = json.dumps([item['category'] for item in category_data])
     chart_values = json.dumps([float(item['total']) for item in category_data])
@@ -50,7 +48,9 @@ def expense_list(request):
     if request.method == 'POST':
         form = ExpenseForm(request.POST)
         if form.is_valid():
-            form.save()
+            expense = form.save(commit=False)
+            expense.user = request.user
+            expense.save()
             return redirect('expense_list')
 
     return render(request, 'expenses/expense_list.html', {
@@ -65,14 +65,15 @@ def expense_list(request):
         'monthly_data': monthly_data,
     })
 
+@login_required
 def delete_expense(request, id):
-    expense = Expense.objects.get(id=id)
+    expense = get_object_or_404(Expense, id=id, user=request.user)
     expense.delete()
     return redirect('expense_list')
 
-
+@login_required
 def edit_expense(request, id):
-    expense = get_object_or_404(Expense, id=id)
+    expense = get_object_or_404(Expense, id=id, user=request.user)
     form = ExpenseForm(instance=expense)
 
     if request.method == 'POST':
@@ -85,3 +86,31 @@ def edit_expense(request, id):
         'form': form,
         'expense': expense,
     })
+
+def signup_view(request):
+    if request.user.is_authenticated:
+        return redirect('expense_list')
+    form = UserCreationForm()
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('expense_list')
+    return render(request, 'expenses/signup.html', {'form': form})
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('expense_list')
+    form = AuthenticationForm()
+    if request.method == 'POST':
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('expense_list')
+    return render(request, 'expenses/login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
