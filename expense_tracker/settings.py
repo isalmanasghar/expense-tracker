@@ -79,7 +79,13 @@ WSGI_APPLICATION = 'expense_tracker.wsgi.application'
 import os
 import urllib.parse
 
-MYSQL_URL = os.environ.get('MYSQL_URL', None)
+# Try all possible Railway MySQL URL variables
+MYSQL_URL = (
+    os.environ.get('DATABASE_URL') or
+    os.environ.get('MYSQL_URL') or
+    os.environ.get('MYSQL_PUBLIC_URL') or
+    None
+)
 
 if MYSQL_URL:
     parsed = urllib.parse.urlparse(MYSQL_URL)
