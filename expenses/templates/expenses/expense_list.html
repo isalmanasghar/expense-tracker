@@ -136,7 +136,13 @@
 
             <!-- Expenses Table -->
             <div class="card">
-                <div class="card-header bg-success text-white">Expenses</div>
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <span>Expenses</span>
+                    <a href="/export/?category={{ selected_category }}&start_date={{ start_date }}&end_date={{ end_date }}" 
+                    class="btn btn-light btn-sm">
+                        ⬇️ Export CSV
+                    </a>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>

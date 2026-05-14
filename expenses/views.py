@@ -8,6 +8,8 @@ from django.utils import timezone
 from .models import Expense
 from .forms import ExpenseForm
 import json
+import csv
+from django.http import HttpResponse
 
 @login_required
 def expense_list(request):
@@ -123,3 +125,37 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+@login_required
+def export_expenses(request):
+    expenses = Expense.objects.filter(user=request.user).order_by('-date')
+
+    # Apply same filters as main page
+    category = request.GET.get('category', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    if category:
+        expenses = expenses.filter(category=category)
+    if start_date:
+        expenses = expenses.filter(date__gte=start_date)
+    if end_date:
+        expenses = expenses.filter(date__lte=end_date)
+
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="expenses.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Title', 'Amount', 'Category', 'Date', 'Description'])
+
+    for expense in expenses:
+        writer.writerow([
+            expense.title,
+            expense.amount,
+            expense.category,
+            expense.date,
+            expense.description,
+        ])
+
+    return response
