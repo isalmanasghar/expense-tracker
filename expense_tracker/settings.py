@@ -79,37 +79,19 @@ WSGI_APPLICATION = 'expense_tracker.wsgi.application'
 import os
 import urllib.parse
 
-# Try all possible Railway MySQL URL variables
-MYSQL_URL = (
-    os.environ.get('DATABASE_URL') or
-    os.environ.get('MYSQL_URL') or
-    os.environ.get('MYSQL_PUBLIC_URL') or
-    None
-)
+MYSQL_URL = os.environ.get('MYSQL_PUBLIC_URL', 'mysql://root:Strong#123@localhost:3306/expense_tracker_db')
 
-if MYSQL_URL:
-    parsed = urllib.parse.urlparse(MYSQL_URL)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': parsed.path[1:],
-            'USER': parsed.username,
-            'PASSWORD': parsed.password,
-            'HOST': parsed.hostname,
-            'PORT': parsed.port,
-        }
+parsed = urllib.parse.urlparse(MYSQL_URL)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': parsed.path[1:],
+        'USER': parsed.username,
+        'PASSWORD': parsed.password,
+        'HOST': parsed.hostname,
+        'PORT': parsed.port,
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'expense_tracker_db',
-            'USER': 'root',
-            'PASSWORD': 'Strong#123',
-            'HOST': 'localhost',
-            'PORT': '3306',
-        }
-    }
+}
 
 
 # Password validation
