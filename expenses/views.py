@@ -4,6 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
+from django.utils import timezone
 from .models import Expense
 from .forms import ExpenseForm
 import json
@@ -23,7 +24,14 @@ def expense_list(request):
     if end_date:
         expenses = expenses.filter(date__lte=end_date)
 
-    total = sum(e.amount for e in expenses)
+    today = timezone.now().date()
+    current_month = today.strftime('%B %Y')
+    monthly_expenses = Expense.objects.filter(
+        user=request.user,
+        date__year=today.year,
+        date__month=today.month
+    )
+    total = sum(e.amount for e in monthly_expenses)
 
     category_data = (
         expenses
@@ -63,6 +71,7 @@ def expense_list(request):
         'chart_labels': chart_labels,
         'chart_values': chart_values,
         'monthly_data': monthly_data,
+        'current_month': current_month,
     })
 
 @login_required
